@@ -1,0 +1,14 @@
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "slack-bot"
+s3_bucket = "my"
+region = "us-east-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = [
+    "SecretsManagerLocation=/devops/slackbot",
+    "env=devops",
+    "AssumedRole=arn:aws:iam::530182258888:role/LambdaFullAccessEc2ReadyOnlyTrusting",
+    "MasterLambda=arn:aws:lambda:us-east-2:530182258888:function:SecondTimeCharm"
+]
