@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  redshiftGlueSF
+
+Resources:
+
+  GlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties: 
+      DatabaseName: SuperGLU_DB
+      Targets:
+        S3Targets:
+            - Path: s3://rdvt-si3mshady-sandbox/JEOPARDY_CSV.csv
+      Role: !Ref GlueRole
+      Schedule:
+        ScheduleExpression: cron(0/8 * * * ? *)   
+
+    
+  GluePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Roles: 
+        - !Ref GlueRole
+      PolicyName: SuperGLUE
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'cloudformation:*'
+              - 's3:*'
+              - 'glue:*'
+            Resource: '*'
+    
+    
+
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+              - glue.amazonaws.com
+
+
+
+     # https://docs.aws.amazon.com/glue/latest/dg/populate-with-cloudformation-templates.html
