@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  redShiftClusterPractice
+
+Resources:
+  MyRedShiftClusterGroup:
+    Type: AWS::Redshift::ClusterSubnetGroup
+    Properties: 
+      Description: String
+      SubnetIds: 
+        - subnet-06562e7af9d3c6c61
+
+  MyRedShiftCluster:
+    Type: AWS::Redshift::Cluster
+    Properties: 
+      AvailabilityZone: us-east-2a
+      ClusterIdentifier: first-redshift-deployment 
+
+      ClusterSubnetGroupName: !Ref MyRedShiftClusterGroup
+      ClusterType: single-node
+      DBName: redshift-db-si3mshady
+      IamRoles: 
+        - arn:aws:iam::305373015238:role/RedshiftS3Readonly      
+      MasterUsername: djshady
+      MasterUserPassword: B12345678g
+      NodeType: ds2.xlarge
+
+      Port: 5439     
+      PubliclyAccessible: True 
+      VpcSecurityGroupIds: 
+        - sg-0e28af83c4daca69e
+          
+  SuperGlueJob:
+      Type: AWS::Glue::Job
+      Properties: 
+        DefaultArguments:
+          "--TempDir": "s3://rdvt-si3mshady-sandbox"
+        
+        Command: 
+          Name: glueetl
+          ScriptLocation: "s3://aws-glue-scripts-305373015238-us-east-2/earnold/redflix_glue_s3" 
+        Role: !Ref GlueRole
+
+
+  GlueJobPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Roles: 
+        - !Ref GlueRole
+      PolicyName: GlueJobPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:        
+                - 'glue:*'
+                - 's3:*'
+          
+                - 'ec2:DescribeVpcEndpoints'
+                - 'ec2:DescribeRouteTables'
+                - 'ec2:CreateNetworkInterface'
+                - 'ec2:DeleteNetworkInterface'
+                - 'ec2:DescribeNetworkInterfaces'
+                - 'ec2:DescribeSecurityGroups'
+                - 'ec2:DescribeSubnets'
+                - 'ec2:DescribeVpcAttribute'
+                - 'iam:ListRolePolicies'
+                - 'iam:GetRole'
+                - 'iam:GetRolePolicy'
+                - 'cloudwatch:PutMetricData'
+            Resource: '*'   
+
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+              - glue.amazonaws.com
+              
+   GlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties: 
+      DatabaseName: SuperGLU_DB
+      Targets:
+        S3Targets:
+            - Path: s3://rdvt-si3mshady-sandbox/JEOPARDY_CSV.csv
+      Role: !Ref GlueRole
+      Schedule:
+        ScheduleExpression: cron(0/8 * * * ? *)   
+
+    
+  GluePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      Roles: 
+        - !Ref GlueRole
+      PolicyName: SuperGLUE
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'cloudformation:*'
+              - 's3:*'
+              - 'glue:*'
+            Resource: '*'
+
+
+
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+              - glue.amazonaws.com
+
+
+
+
+Outputs:
+  ClusterEndpoint:
+    Description: JDBC endpoint
+    Value: !Sub "jdbc:redshift://${MyRedShiftCluster.Endpoint.Address}:${MyRedShiftCluster.Endpoint.Port}/<Database name>"
+
+
+  
